@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: context_core_postgres
+    environment:
+      POSTGRES_USER: context_core
+      POSTGRES_PASSWORD: context_core
+      POSTGRES_DB: context_core
+    ports:
+      - "5432:5432"
+    volumes:
+      - context_core_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U context_core -d context_core"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  context-core:
+    build: .
+    container_name: context_core_app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://context_core:context_core@postgres:5432/context_core
+      DEVICE_REGISTRATION_SECRET: change-me-too
+      JWT_SECRET: reserved-for-future-use-min-32-characters
+      GROQ_API_KEY: ""
+      GROQ_MODEL: llama-3.3-70b-versatile
+      ENVIRONMENT: dev
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"
+
+volumes:
+  context_core_pgdata:
