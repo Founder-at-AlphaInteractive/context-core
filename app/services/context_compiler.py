@@ -14,6 +14,10 @@ Core invariants:
    memory items packed into the output.
 5. Tolerant state rendering: safely handles malformed or non-list state JSON.
 6. Pure compilation: does not mutate project state or database entities.
+7. Token budget approximation: The budget is enforced using a character-based
+   estimator (math.ceil(len(text) / CHARS_PER_TOKEN) + 1). For code-heavy or
+   non-English content, actual token count may vary. Clients should treat the
+   budget as approximate and allow an appropriate safety margin.
 """
 
 from __future__ import annotations

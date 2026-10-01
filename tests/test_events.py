@@ -165,3 +165,60 @@ def test_events_endpoint_catchup_and_isolation(client, db_session):
     assert res_p2.json()["latest_sequence"] == 2
     assert len(res_p2.json()["events"]) == 2
 
+
+def test_concurrent_events_get_unique_sequences(engine, SessionFactory):
+    """Verify that concurrent mutations produce unique, monotonic event sequences per project."""
+    if engine.dialect.name != "postgresql":
+        pytest.skip("Row-level sequence locking requires PostgreSQL")
+    import threading
+
+    session0 = SessionFactory()
+    p = Project(name="Concurrent Event Proj", last_event_sequence=0)
+    session0.add(p)
+    session0.commit()
+    project_id = p.id
+    session0.close()
+
+    barrier = threading.Barrier(2)
+    results = []
+
+    def worker(worker_id):
+        session = SessionFactory()
+        try:
+            barrier.wait()
+            e = emit_event(
+                session,
+                project_id=project_id,
+                event_type=EventType.SYNC_REQUIRED,
+                payload={"worker": worker_id},
+            )
+            session.commit()
+            results.append((worker_id, e.sequence))
+        finally:
+            session.close()
+
+    t1 = threading.Thread(target=worker, args=("t1",))
+    t2 = threading.Thread(target=worker, args=("t2",))
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    assert len(results) == 2
+    sequences = [r[1] for r in results]
+    assert sorted(sequences) == [1, 2]
+
+    # Verify project row updated
+    verify_session = SessionFactory()
+    proj = verify_session.get(Project, project_id)
+    assert proj.last_event_sequence == 2
+    events = (
+        verify_session.query(Event)
+        .filter(Event.project_id == project_id)
+        .order_by(Event.sequence)
+        .all()
+    )
+    assert [ev.sequence for ev in events] == [1, 2]
+    verify_session.close()
+
+

@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     )
 
     # Auth
-    jwt_secret: str = "dev-insecure-jwt-secret-replace-in-production-min-32-chars"
+    jwt_secret: str | None = None
     jwt_algorithm: str = "HS256"
     access_token_ttl_minutes: int = 60 * 24 * 30
     device_registration_secret: str = "dev-device-registration-secret"

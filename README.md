@@ -1,4 +1,4 @@
-# Context Core — Backend (Public Architecture & Code Review Mirror)
+# Context Core - Backend (Public Architecture & Code Review Mirror)
 
 > [!IMPORTANT]
 > **Public Review Notice**:
@@ -9,6 +9,7 @@
 > - This public mirror contains no private production data or confidential environment keys.
 
 ---
+
 A private, single-user backend that maintains **authoritative, durable project reality** across disposable AI conversations (ChatGPT, DeepSeek, Qwen, Claude, Cline, etc.) and multiple client devices (Windows, Android, tablet, browser).
 
 > **Core Principle**: AI conversations are disposable workers. Context Core owns durable project reality. The human developer remains the final authority.
@@ -187,4 +188,7 @@ TEST_DATABASE_URL="postgresql+psycopg2://context_core:context_core@localhost:543
 3. **In-Process Worker**: Job queue poller runs in a background thread inside the FastAPI process.
 4. **WebSocket is Best-Effort**: Slow consumers drop queued frames and catch up through the REST `/events?since=N` endpoint.
 5. **Private / Single-User Backend**: V1 does not require multi-tenant billing or role-based user hierarchies.
+6. **Token Budget Approximation**: The context compiler uses a conservative ceiling estimator (`math.ceil(len(text) / 4) + 1`). Clients requiring strict model token limits should allow an appropriate safety margin.
+7. **JWT_SECRET Reserved & Optional**: Configured as optional (`None` default) since active V1 authentication exclusively uses high-entropy opaque bearer tokens.
+
 

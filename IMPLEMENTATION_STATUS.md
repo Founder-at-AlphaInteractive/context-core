@@ -146,16 +146,30 @@
 
 ### Subsystem: PostgreSQL Live Concurrency Testing
 - **Status**: `NOT EXECUTED — PostgreSQL server unavailable`
-- **Evidence**: `psql` and `pg_isready` are not installed on local PATH. 3 concurrency tests requiring live PostgreSQL `FOR UPDATE` row locking (`test_concurrent_duplicate_capture_submission`, `test_concurrent_state_updates_optimistic_conflict`, `test_concurrent_state_updates_serialized_versions`) were authoritatively skipped with dialect checks.
-- **Tests Executed**: 132 tests passed offline via SQLite compatibility layer; 3 PostgreSQL concurrency tests skipped pending live Postgres service.
+- **Evidence**: `psql` and `pg_isready` are not installed on local PATH. 4 concurrency tests requiring live PostgreSQL `FOR UPDATE` row locking (`test_concurrent_duplicate_capture_submission`, `test_concurrent_state_updates_optimistic_conflict`, `test_concurrent_state_updates_serialized_versions`, `test_concurrent_events_get_unique_sequences`) were authoritatively skipped with dialect checks.
+- **Tests Executed**: 134 tests passed offline via SQLite compatibility layer; 4 PostgreSQL concurrency tests skipped pending live Postgres service.
 - **Known Limitation**: Local machine does not run PostgreSQL daemon on port 5432.
 
 ---
 
-## 4. Test Summary
+## 4. DeepSeek External Audit Verification Ledger
+
+| DeepSeek Finding | Current Repository Reality | Finding Classification | Implemented Action |
+|---|---|---|---|
+| **Finding 1**: Real PostgreSQL concurrency unverified (tests skipped) | 4 concurrency tests exist (`test_state.py`, `test_captures.py`, `test_events.py`) testing independent sessions/threads with barriers. Skipped when engine dialect is not PostgreSQL. | `VERIFIED CORRECT` | Retained skipif dialect detection with explicit reasons; verified zero false claims. Awaiting live Postgres instance. |
+| **Finding 2**: `JWT_SECRET` is required config but unused in V1 | `jwt_secret: str` was defined in `config.py` with dev default; never consumed by services/API (opaque bearer tokens used). | `VERIFIED CORRECT` | Changed to `jwt_secret: str | None = None`. Added `test_settings_without_jwt_secret`. |
+| **Finding 3**: Token counting is approximate (`len(text)//4`) | Context compiler uses ceiling estimator `math.ceil(len(text)/4) + 1`. Code-heavy content could deviate from model tokenizer. | `VERIFIED CORRECT` | Documented budget approximation in `context_compiler.py` docstring and `README.md` limitations. |
+| **Finding 4**: `worker_enabled` check for multi-replica deployments | `worker_enabled: bool = True` was already added in Part 6 and wired to `main.py` poller task. | `ALREADY FIXED` | Added `test_settings_worker_enabled_toggle` in `test_main_lifecycle.py`. |
+| **Finding 5**: Search uses `ILIKE` with no index | Scoped `ILIKE` across memory, messages, conversations, handoffs. | `VERIFIED CORRECT` | Kept as designed for V1 private use; documented as scaling limit in README. |
+| **Finding 6**: Export complete but import absent | Deliberate V1 architecture decision to avoid sequence renumbering corruption. | `VERIFIED CORRECT` | Kept as designed; documented `NOT IMPLEMENTED` in README and status ledger. |
+
+---
+
+## 5. Test Summary
 
 ```text
-Command: pytest -v --cov=app
-Result: 132 passed, 3 skipped in 18.12s
-Total Coverage: 92% across 2,584 statements
+Command: pytest -q
+Result: 134 passed, 4 skipped in 11.09s
+Total Statements: 2,586
+Passing Unit Coverage: 92%
 ```

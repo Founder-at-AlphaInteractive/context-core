@@ -72,3 +72,22 @@ async def test_poller_clean_startup_and_shutdown(db_session):
     # Wait for clean completion
     await asyncio.wait_for(task, timeout=2.0)
     assert task.done()
+
+
+def test_settings_without_jwt_secret(monkeypatch):
+    """Verify Settings instantiates cleanly without requiring JWT_SECRET."""
+    from app.config import Settings
+    monkeypatch.delenv("JWT_SECRET", raising=False)
+    s = Settings(_env_file=None, jwt_secret=None)
+    assert s.jwt_secret is None
+
+
+def test_settings_worker_enabled_toggle():
+    """Verify worker_enabled flag can be configured."""
+    from app.config import Settings
+    s_default = Settings(_env_file=None)
+    assert s_default.worker_enabled is True
+
+    s_disabled = Settings(_env_file=None, worker_enabled=False)
+    assert s_disabled.worker_enabled is False
+
